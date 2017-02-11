@@ -1,10 +1,8 @@
-import java.io.{File, FileInputStream}
+import java.io.File
 import java.nio.file.Files
-import java.util.Properties
 import net.lingala.zip4j.core._
 import scala.sys.process._
 import scala.collection._
-import scala.collection.JavaConverters._
 import util._
 
 package object compilers {
@@ -12,13 +10,13 @@ package object compilers {
     case class Compile(lang: Language, zip: File)
     
     sealed trait Language
-    case class Java() extends Language
-    case class Scala() extends Language
-    case class Cpp() extends Language
-    case class Python() extends Language
-    case class Rust() extends Language
-    case class Go() extends Language
-    case class Haskell() extends Language
+    case object Java extends Language
+    case object Scala extends Language
+    case object Cpp extends Language
+    case object Python extends Language
+    case object Rust extends Language
+    case object Go extends Language
+    case object Haskell extends Language
     
     case class Library(lang: Language, name: String, version: String)
     
@@ -52,23 +50,23 @@ package object compilers {
     }
 
     private def createCommand(lang: Language, properties: mutable.Map[String, String], libraries: List[File], source: File, target: File): ProcessBuilder = lang match {
-        case Java() =>
+        case Java =>
             val classpath = join("." :: (libraries flatMap (recChildren(_, "jar")) map (_.getAbsolutePath)), ":")
             val files = join(recChildren(source, "java") map (_.getAbsolutePath), " ")
             s"javac -cp $classpath -d ${target.toString} $files"
-        case Scala() =>
+        case Scala =>
             val classpath = join("." :: (libraries flatMap (recChildren(_, "jar")) map (_.getAbsolutePath)), ":")
             val files = join(recChildren(source, "scala") map (_.getAbsolutePath), " ")
             s"scalac -cp $classpath -d ${target.toString} $files"
-        case Cpp() =>
+        case Cpp =>
             "echo 'aaay cpp'"
-        case Python() =>
+        case Python =>
             "echo 'aaay python'"
-        case Rust() =>
+        case Rust =>
             "echo 'aaay rust'"
-        case Go() =>
+        case Go =>
             "echo 'aaay go'"
-        case Haskell() =>
+        case Haskell =>
             "echo 'aaay haskell'"
     }
 }

@@ -1,4 +1,3 @@
-import java.io.File
 
 import compilers._
 import net.lingala.zip4j.core.ZipFile
@@ -26,18 +25,20 @@ package object sandbox {
 	}
 	
 	private def createCommand(lang: Language, properties: mutable.Map[String, String]): String = lang match {
-		case Java() =>
+		case Java =>
 			s"java ${properties("main-class")}"
-		case Scala() =>
+		case Scala =>
 			s"scala ${properties("main-class")}"
-		case Cpp() =>
+		case Cpp =>
 			"./ai"
-		case Python() =>
+		case Python =>
 			s"python${properties("version")} ${properties("main-file")}"
-		case Rust() =>
+		case Rust =>
 			s"./ai"
-		case Go() =>
-		case Haskell() =>
+		case Go =>
+			""
+		case Haskell =>
+			""
 	}
 	
 }
