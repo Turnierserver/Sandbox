@@ -9,9 +9,8 @@ object WorkerClient {
 	
 	var out: Option[PrintWriter] = none
 	var in: Option[BufferedReader] = none
-	private var listener: Option[Message => Unit] = None
 	
-	def connect(host: String, port: Int): Unit = {
+	def connect(host: String, port: Int)(listener: (Message, String => Unit) => Unit): Unit = {
 		for (connection <- managed(new Socket(host, port));
 			outStream <- managed(connection.getOutputStream);
 			inStream <- managed(new InputStreamReader(connection.getInputStream))
@@ -21,18 +20,16 @@ object WorkerClient {
 			
 			def read(): Unit = (in ∘ {_.readLine}) | null match {
 				case null => ()
-				case line => parse(line); read()
+				case line => parse(line, listener); read()
 			}
 			read()
 		}
 	}
 	
-	private def parse(line: String): Unit = {
+	private def parse(line: String, listener: Message => Unit): Unit = {
 		
 	}
 	
 	def write(line: String): Unit = out foreach {_ println line}
-	
-	def listen(f: Message => Unit): Unit = listener = f.some
 	
 }
