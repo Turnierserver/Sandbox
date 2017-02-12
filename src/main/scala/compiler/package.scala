@@ -4,6 +4,7 @@ import net.lingala.zip4j.core._
 import scala.sys.process._
 import scala.collection._
 import util._
+import scalaz._, Scalaz._
 
 package object compilers {
 	
@@ -25,38 +26,42 @@ package object compilers {
         val folder = extract(new ZipFile(comp.zip.getAbsolutePath))
         val propertiesFile = new File(folder, "properties.prop")
         val librariesFile = new File(folder, "properties.txt")
+	    
         if(!propertiesFile.exists) {
             logger("properties.prop existiert nicht!")
-            return None
+            none
         }
-        if(!librariesFile.exists) {
+        else if(!librariesFile.exists) {
             logger("libraries.txt existiert nicht!")
-            return None
+            none
         }
-        val properties = readProperties(propertiesFile)
-        val libraries = readLibraries(librariesFile, comp.lang) map fetchLibrary
-        val target = Files.createTempDirectory("turnierserver-compiler-target").toFile
-        val command = createCommand(comp.lang, properties, libraries, folder, target)
-        if(command ! ProcessLogger(logger) == 0) {
-	        Files.copy(propertiesFile.toPath, new File(target, "properties.prop").toPath)
-	        Some(zip(target))
+        else {
+	        val properties = readProperties(propertiesFile)
+	        val libraries = readLibraries(librariesFile, comp.lang) ∘ fetchLibrary
+	        val target = Files createTempDirectory "turnierserver-compiler-target" toFile
+	        val command = createCommand(comp.lang, properties, libraries, folder, target)
+	        logger("Compiling with command " + command.toString)
+	        if (command ! ProcessLogger(logger) == 0) {
+		        Files copy (propertiesFile toPath, new File(target, "properties.prop") toPath)
+		        zip(target).some
+	        }
+	        else none
         }
-        else None
     }
     
-    private def readLibraries(file: File, lang: Language): List[Library] = streamToList(Files.lines(file.toPath)) map(_.split("/")) flatMap { a =>
+    private def readLibraries(file: File, lang: Language): List[Library] = streamToList(Files lines file.toPath) ∘ {_.split("/")} >>= { a =>
         if(a.length != 2) Nil
         else List(Library(lang, a(0), a(1)))
     }
 
     private def createCommand(lang: Language, properties: mutable.Map[String, String], libraries: List[File], source: File, target: File): ProcessBuilder = lang match {
         case Java =>
-            val classpath = join("." :: (libraries flatMap (recChildren(_, "jar")) map (_.getAbsolutePath)), ":")
-            val files = join(recChildren(source, "java") map (_.getAbsolutePath), " ")
+            val classpath = join("." :: ((libraries >>= {recChildren(_, "jar")}) ∘ {_.getAbsolutePath}), ":")
+            val files = join(recChildren(source, "java") ∘ {_.getAbsolutePath}, " ")
             s"javac -cp $classpath -d ${target.toString} $files"
         case Scala =>
-            val classpath = join("." :: (libraries flatMap (recChildren(_, "jar")) map (_.getAbsolutePath)), ":")
-            val files = join(recChildren(source, "scala") map (_.getAbsolutePath), " ")
+            val classpath = join("." :: ((libraries >>= {recChildren(_, "jar")}) ∘ {_.getAbsolutePath}), ":")
+            val files = join(recChildren(source, "scala") ∘ {_.getAbsolutePath}, " ")
             s"scalac -cp $classpath -d ${target.toString} $files"
         case Cpp =>
             "echo 'aaay cpp'"

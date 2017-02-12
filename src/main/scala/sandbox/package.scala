@@ -2,6 +2,7 @@
 import compilers._
 import net.lingala.zip4j.core.ZipFile
 import util._
+import scalaz._, Scalaz._
 
 import scala.collection.mutable
 
@@ -14,14 +15,14 @@ package object sandbox {
 		val properties = readProperties(ai)
 		val command = createCommand(r.lang, properties)
 		
-		if(!Isolate.init(1))
-			Some("Initialization of Isolate failed!")
-		else if(!Isolate.run(1, ai, command))
-			Some("Walltime or memory-limit exceeded!")
-		else if(!Isolate.cleanup(1))
-			Some("Cleanup of Isolate failed!")
+		if(!(Isolate init 1))
+			"Initialization of Isolate failed!".some
+		else if(!(Isolate run (1, ai, command)))
+			"Walltime or memory-limit exceeded!".some
+		else if(!(Isolate cleanup 1))
+			"Cleanup of Isolate failed!".some
 		else
-			None
+			none
 	}
 	
 	private def createCommand(lang: Language, properties: mutable.Map[String, String]): String = lang match {
