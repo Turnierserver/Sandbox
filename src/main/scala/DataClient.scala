@@ -3,27 +3,47 @@ import java.net.Socket
 
 import resource.managed
 
-import scalaz._, Scalaz._
+import scala.concurrent.Channel
 
 object DataClient {
 	
-	var out: Option[PrintWriter] = none
-	var in: Option[BufferedReader] = none
+	val writeChannel = new Channel[String]()
+	val readChannel = new Channel[Array[Byte]]()
 	
-	def connect(host: String, port: Int): Unit = {
-		for (connection <- managed(new Socket(host, port));
-		     outStream <- managed(connection.getOutputStream);
-		     inStream <- managed(new InputStreamReader(connection.getInputStream))
+	def connect (host: String, port: Int): Unit = {
+		for (connection <- managed (new Socket (host, port));
+			 outStream <- managed (connection.getOutputStream);
+			 inStream <- managed (new InputStreamReader (connection.getInputStream))
 		) {
-			out = new PrintWriter(new BufferedWriter(new OutputStreamWriter(outStream))).some
-			in = new BufferedReader(inStream).some
-			while(true) ()
+			val out = new PrintWriter (new BufferedWriter (new OutputStreamWriter (outStream)))
+			val in = new BufferedReader (inStream)
+			
+			def readWrite (): Unit = {
+				val send = writeChannel read
+				
+				if (connection isClosed) {
+					writeChannel write send
+					return ()
+				}
+				
+				out println send
+				in readLine match {
+					case null =>
+						writeChannel write send
+					case line =>
+						readChannel write line.getBytes
+						readWrite ()
+				}
+				
+			}
+			
+			readWrite ()
 		}
 	}
 	
-	def send(s: String): Array[Byte] = {
-		out foreach {_ println s}
-		(in ∘ {_ readLine() getBytes}) | Array[Byte]()
+	def send (s: String): Array[Byte] = {
+		writeChannel write s
+		readChannel read
 	}
 	
 }
